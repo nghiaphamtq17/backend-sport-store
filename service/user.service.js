@@ -139,6 +139,38 @@ const updateUser = async (req, res) => {
   }
 };
 
-const deleteUser = 
+const deleteUser = async (req,res) => {
+    try {
+        const {id} = req.params;
 
-module.exports = { loginUser, registerUser, updateUser };
+
+
+        // kiểm tra xem id người này truyền lên có giống id của token không
+        if (req.user._id.toString() !== id) {
+            return res.status(403).json({
+              msg: "Không có quyền chỉnh sửa thông tin người này!",
+            });
+          }
+
+            //kiểm tra sự tồn tại của ng dùng
+          const user = await User.findById(id);
+
+          if (!user) {
+            return res.status(400).json({
+              msg: "Ng dùng k tồn tại",
+            });
+          }
+
+          // Tìm kiểm người dùng và xoá 
+          await User.findByIdAndDelete(id);
+
+          return res.json({ msg: "Đã xoá thanh cong!" });
+
+    } catch (error) {
+        return res.status(500).json({
+            msg: "Internel server error",
+          });
+    }
+}
+
+module.exports = { loginUser, registerUser, updateUser, deleteUser };
