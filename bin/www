@@ -8,6 +8,7 @@ var app = require("../app");
 var debug = require("debug")("express-store:server");
 var http = require("http");
 var mongoose = require("mongoose");
+const serverless = require('serverless-http');
 
 const mongoURI = "mongodb://localhost:27017/sport-store";
 
@@ -93,3 +94,5 @@ function onListening() {
   debug("Listening on " + bind);
   console.log("Compile success");
 }
+
+module.exports.handler = serverless(app);
