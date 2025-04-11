@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node ./bin/www",
     "dev": "node --watch ./bin/www",
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "vercel-dev": "vercel dev"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
