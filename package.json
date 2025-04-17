@@ -21,8 +21,5 @@
     "morgan": "~1.9.1",
     "serverless-http": "^3.2.0",
     "uglify-js": "^3.19.3"
-  },
-  "resolutions": {
-    "transformers": "0.0.0"
   }
 }
