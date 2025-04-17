@@ -109,7 +109,8 @@ const registerUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id || null;
+    
     const { firstName, lastName } = req.body;
 
     if (req.user._id.toString() !== id) {

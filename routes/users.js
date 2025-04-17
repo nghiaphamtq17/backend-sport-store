@@ -7,6 +7,7 @@ const {
   deleteUser,
 } = require("../service/user.service");
 const { authMiddleware } = require("../middleware/auth.middleware");
+// const { checkUserRole } = require('../middleware/admin.middleware')
 
 router.post("/register", async (req, res, next) => registerUser(req, res));
 
