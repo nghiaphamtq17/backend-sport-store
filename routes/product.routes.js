@@ -1,32 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const {
-  createProduct,
-  getProducts,
-  getProductById,
-  updateProduct,
-  deleteProduct,
-  addReview,
-  updateStock
-} = require('../service/product.service');
+const productService = require('../service/product.service');
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { 
-  canManageProducts,
-  canManageInventory,
-  canReviewProducts
-} = require('../middleware/role.middleware');
+const { roleMiddleware } = require('../middleware/role.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const { createProductValidation, updateProductValidation, productIdValidation } = require('../validators/product.validator');
 
 // Public routes
-router.get('/', async (req, res) => await getProducts(req, res));
-router.get('/:id', async (req, res) => await getProductById(req, res));
+router.get('/', productService.getProducts);
+router.get('/:id', validate(productIdValidation), productService.getProductById);
 
-// Protected routes (require authentication and appropriate role)
-router.post('/:id/reviews', authMiddleware, canReviewProducts, async (req, res) => await addReview(req, res));
+// Protected routes (require authentication)
+router.post(
+  '/',
+  authMiddleware,
+  roleMiddleware(['admin', 'manager']),
+  validate(createProductValidation),
+  productService.createProduct
+);
 
-// Admin/Manager routes (require authentication and appropriate role)
-router.post('/', authMiddleware, canManageProducts, async (req, res) => await createProduct(req, res));
-router.put('/:id', authMiddleware, canManageProducts, async (req, res) => await updateProduct(req, res));
-router.delete('/:id', authMiddleware, canManageProducts, async (req, res) => await deleteProduct(req, res));
-router.put('/:id/stock', authMiddleware, canManageInventory, async (req, res) => await updateStock(req, res));
+router.put(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['admin', 'manager']),
+  validate(updateProductValidation),
+  productService.updateProduct
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['admin', 'manager']),
+  validate(productIdValidation),
+  productService.deleteProduct
+);
+
+// Protected routes for reviews and stock
+router.post(
+  '/:id/reviews',
+  authMiddleware,
+  validate(productIdValidation),
+  productService.addReview
+);
+
+router.put(
+  '/:id/stock',
+  authMiddleware,
+  roleMiddleware(['admin', 'manager']),
+  validate(productIdValidation),
+  productService.updateStock
+);
 
 module.exports = router;

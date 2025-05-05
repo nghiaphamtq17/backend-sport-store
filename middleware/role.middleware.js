@@ -37,6 +37,26 @@ const canManageProducts = checkUserRole(['admin', 'manager']);
 const canManageInventory = checkUserRole(['admin', 'manager', 'staff']);
 const canReviewProducts = checkUserRole(['admin', 'manager', 'staff', 'customer']);
 
+const roleMiddleware = (allowedRoles) => {
+  return (req, res, next) => {
+    // Kiểm tra xem user đã được xác thực chưa
+    if (!req.user) {
+      return res.status(401).json({
+        msg: 'Chưa đăng nhập'
+      });
+    }
+
+    // Kiểm tra xem user có role được phép không
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        msg: 'Không có quyền truy cập'
+      });
+    }
+
+    next();
+  };
+};
+
 module.exports = {
   checkUserRole,
   isAdmin,
@@ -45,5 +65,6 @@ module.exports = {
   isCustomer,
   canManageProducts,
   canManageInventory,
-  canReviewProducts
+  canReviewProducts,
+  roleMiddleware
 }; 

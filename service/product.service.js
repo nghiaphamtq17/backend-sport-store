@@ -1,4 +1,7 @@
 const Product = require('../model/Product.model');
+const Category = require('../model/category.model');
+const Color = require('../model/color.model');
+const Size = require('../model/size.model');
 
 // Create a new product
 const createProduct = async (req, res) => {
@@ -20,6 +23,110 @@ const createProduct = async (req, res) => {
     if (!name || !description || !price || !images || !category || !sportType || !variants) {
       return res.status(400).json({
         msg: "Thiếu thông tin bắt buộc"
+      });
+    }
+
+    // Validate name
+    if (name.length < 3 || name.length > 100) {
+      return res.status(400).json({
+        msg: "Tên sản phẩm phải từ 3 đến 100 ký tự"
+      });
+    }
+
+    // Validate description
+    if (description.length < 10) {
+      return res.status(400).json({
+        msg: "Mô tả sản phẩm phải có ít nhất 10 ký tự"
+      });
+    }
+
+    // Validate price
+    if (isNaN(price) || price <= 0) {
+      return res.status(400).json({
+        msg: "Giá sản phẩm phải là số dương"
+      });
+    }
+
+    // Validate discount
+    if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
+      return res.status(400).json({
+        msg: "Giảm giá phải từ 0 đến 100%"
+      });
+    }
+
+    // Validate images
+    if (!Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({
+        msg: "Sản phẩm phải có ít nhất một hình ảnh"
+      });
+    }
+
+    // Validate category exists
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) {
+      return res.status(400).json({
+        msg: "Danh mục không tồn tại"
+      });
+    }
+
+    // Validate variants
+    if (!Array.isArray(variants) || variants.length === 0) {
+      return res.status(400).json({
+        msg: "Sản phẩm phải có ít nhất một biến thể"
+      });
+    }
+
+    // Validate each variant
+    for (const variant of variants) {
+      // Validate color
+      if (!variant.color) {
+        return res.status(400).json({
+          msg: "Mỗi biến thể phải có màu sắc"
+        });
+      }
+
+      const colorExists = await Color.findById(variant.color);
+      if (!colorExists) {
+        return res.status(400).json({
+          msg: `Màu sắc ${variant.color} không tồn tại`
+        });
+      }
+
+      // Validate sizes
+      if (!Array.isArray(variant.sizes) || variant.sizes.length === 0) {
+        return res.status(400).json({
+          msg: "Mỗi biến thể phải có ít nhất một kích thước"
+        });
+      }
+
+      // Validate each size
+      for (const size of variant.sizes) {
+        if (!size.size || !size.quantity) {
+          return res.status(400).json({
+            msg: "Mỗi kích thước phải có size và số lượng"
+          });
+        }
+
+        const sizeExists = await Size.findById(size.size);
+        if (!sizeExists) {
+          return res.status(400).json({
+            msg: `Kích thước ${size.size} không tồn tại`
+          });
+        }
+
+        if (isNaN(size.quantity) || size.quantity < 0) {
+          return res.status(400).json({
+            msg: "Số lượng phải là số không âm"
+          });
+        }
+      }
+    }
+
+    // Check for duplicate product name
+    const existingProduct = await Product.findOne({ name });
+    if (existingProduct) {
+      return res.status(400).json({
+        msg: "Tên sản phẩm đã tồn tại"
       });
     }
 
