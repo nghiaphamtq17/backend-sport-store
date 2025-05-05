@@ -5,24 +5,26 @@
  */
 
 var app = require("../app");
-var debug = require("debug")("express-store:server");
+var debug = require("debug")("du-an-expressjs:server");
 var http = require("http");
-var mongoose = require("mongoose");
-const serverless = require('serverless-http');
-
-const mongoURI = "mongodb://localhost:27017/sport-store";
-
-mongoose
-  .connect(mongoURI)
-  .then(() => console.log("Connected MongoDB!"))
-  .catch((err) => console.log("Fail connect to MongoDB!", err));
+var mongoose = require('mongoose');
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || "4000");
+var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
+
+console.log("port", port);
+
+const mongoUri = process.env.NODE_ENV === 'dev' ? process.env.MONGO_URI : process.env.MONGO_URI_2;
+
+
+mongoose
+  .connect(mongoUri)
+  .then(() => console.log("Connect database success!"))
+  .catch((err) => console.log("Fail connect", err));
 
 /**
  * Create HTTP server.
@@ -92,7 +94,4 @@ function onListening() {
   var addr = server.address();
   var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
   debug("Listening on " + bind);
-  console.log("Compile success");
 }
-
-module.exports.handler = serverless(app);

@@ -43,6 +43,9 @@ const deleteColor = async (req, res) => {
 
 // Cập nhật màu theo ID
 const updateColor = async (req, res) => {
+
+  console.log('req.params', req.params);
+  
   try {
     const { name, code } = req.body;
 
