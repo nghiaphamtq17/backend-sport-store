@@ -65,13 +65,6 @@ const createProductValidation = [
       return true;
     }),
 
-  // Sport type validation
-  body('sportType')
-    .notEmpty()
-    .withMessage('Loại thể thao là bắt buộc')
-    .isIn(['football', 'basketball', 'running', 'tennis', 'gym'])
-    .withMessage('Loại thể thao không hợp lệ'),
-
   // Variants validation
   body('variants')
     .isArray({ min: 1 })

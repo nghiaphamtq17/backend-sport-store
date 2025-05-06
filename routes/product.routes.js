@@ -16,7 +16,6 @@ router.post(
   '/',
   authMiddleware,
   roleMiddleware(['admin', 'manager']),
-  upload.array('images', 5), // Allow up to 5 images
   validate(createProductValidation),
   productService.createProduct
 );

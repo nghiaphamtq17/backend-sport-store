@@ -1,4 +1,4 @@
-const Size = require('../model/color.model');
+const Size = require('../model/size.model');
 
 exports.createSize = async (req, res) => {
   try {
@@ -13,6 +13,8 @@ exports.createSize = async (req, res) => {
     const size = await Size.create({ name, description });
     res.status(201).json(size);
   } catch (err) {
+    console.log('err', err);
+    
     res.status(400).json({ error: err.message });
   }
 };

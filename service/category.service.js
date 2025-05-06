@@ -74,7 +74,6 @@ const getCategories = async (req, res) => {
 
     const query = {};
 
-    if (parent !== undefined) query.parent = parent || null;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     if (search) {
       query.$text = { $search: search };
@@ -87,7 +86,6 @@ const getCategories = async (req, res) => {
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .populate('parent');
 
     const total = await Category.countDocuments(query);
 

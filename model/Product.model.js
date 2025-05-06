@@ -31,11 +31,6 @@ const productSchema = new Schema({
     ref: 'Category',
     required: true
   },
-  sportType: {
-    type: Schema.Types.ObjectId,
-    ref: 'SportType',
-    required: true
-  },
   variants: [{
     color: {
       type: Schema.Types.ObjectId,
@@ -94,7 +89,6 @@ const productSchema = new Schema({
 // Tạo các index để tối ưu hiệu suất truy vấn
 productSchema.index({ name: 'text', description: 'text' }); // Index cho tìm kiếm text
 productSchema.index({ category: 1 }); // Index cho tìm kiếm theo danh mục
-productSchema.index({ sportType: 1 }); // Index cho tìm kiếm theo loại thể thao  
 productSchema.index({ isActive: 1 }); // Index cho lọc sản phẩm đang hoạt động
 productSchema.index({ featured: 1 }); // Index cho lọc sản phẩm nổi bật
 

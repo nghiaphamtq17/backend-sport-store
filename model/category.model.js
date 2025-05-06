@@ -34,7 +34,6 @@ const categorySchema = new Schema(
 
 // Indexes for better query performance
 categorySchema.index({ name: 'text' });
-categorySchema.index({ slug: 1 });
 categorySchema.index({ isActive: 1 });
 
 // Middleware to generate slug before saving

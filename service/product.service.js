@@ -13,58 +13,49 @@ const createProduct = async (req, res) => {
       price,
       discount,
       category,
-      sportType,
       variants,
       isActive,
-      featured
+      featured,
+      images
     } = req.body;
 
-    // Get image URLs from uploaded files
-    const images = req.files ? req.files.map(file => file.path) : [];
 
-    // Validate required fields
-    if (!name || !description || !price || !category || !sportType || !variants) {
+    if (!name || !description || !price || !category || !variants) {
       return res.status(400).json({
         msg: "Thiếu thông tin bắt buộc"
       });
     }
 
-    // Validate name
     if (name.length < 3 || name.length > 100) {
       return res.status(400).json({
         msg: "Tên sản phẩm phải từ 3 đến 100 ký tự"
       });
     }
 
-    // Validate description
     if (description.length < 10) {
       return res.status(400).json({
         msg: "Mô tả sản phẩm phải có ít nhất 10 ký tự"
       });
     }
 
-    // Validate price
     if (isNaN(price) || price <= 0) {
       return res.status(400).json({
         msg: "Giá sản phẩm phải là số dương"
       });
     }
 
-    // Validate discount
     if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
       return res.status(400).json({
         msg: "Giảm giá phải từ 0 đến 100%"
       });
     }
 
-    // Validate images
     if (!images || images.length === 0) {
       return res.status(400).json({
         msg: "Sản phẩm phải có ít nhất một hình ảnh"
       });
     }
 
-    // Validate category exists
     const categoryExists = await Category.findById(category);
     if (!categoryExists) {
       return res.status(400).json({
@@ -72,16 +63,13 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Validate variants
     if (!Array.isArray(variants) || variants.length === 0) {
       return res.status(400).json({
         msg: "Sản phẩm phải có ít nhất một biến thể"
       });
     }
 
-    // Validate each variant
     for (const variant of variants) {
-      // Validate color
       if (!variant.color) {
         return res.status(400).json({
           msg: "Mỗi biến thể phải có màu sắc"
@@ -102,7 +90,6 @@ const createProduct = async (req, res) => {
         });
       }
 
-      // Validate each size
       for (const size of variant.sizes) {
         if (!size.size || !size.quantity) {
           return res.status(400).json({
@@ -140,7 +127,6 @@ const createProduct = async (req, res) => {
       discount: discount || 0,
       images,
       category,
-      sportType,
       variants,
       isActive: isActive !== undefined ? isActive : true,
       featured: featured || false
@@ -173,7 +159,6 @@ const getProducts = async (req, res) => {
       page = 1,
       limit = 10,
       category,
-      sportType,
       featured,
       search,
       minPrice,
@@ -185,7 +170,6 @@ const getProducts = async (req, res) => {
     const query = {};
 
     if (category) query.category = category;
-    if (sportType) query.sportType = sportType;
     if (featured !== undefined) query.featured = featured === 'true';
     if (minPrice || maxPrice) {
       query.price = {};
@@ -204,7 +188,6 @@ const getProducts = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .populate('category')
-      .populate('sportType')
       .populate('variants.color')
       .populate('variants.sizes.size');
 
@@ -230,7 +213,6 @@ const getProductById = async (req, res) => {
 
     const product = await Product.findById(id)
       .populate('category')
-      .populate('sportType')
       .populate('variants.color')
       .populate('variants.sizes.size')
       .populate('reviews.user');
