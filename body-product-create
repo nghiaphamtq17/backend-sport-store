@@ -1,0 +1,41 @@
+{
+    "name": "product 1",
+    "description": "mo ta 1mo ta 1mo ta 1mo ta 1mo ta 1",
+    "price": 200000,
+    "images": [
+        "https://res.cloudinary.com/dyqkmjxlq/image/upload/v1746537938/r4ycrvy5jojydjz4kwlc.png"
+    ],
+    "category": "681a0b1e5b885eb5fd335aff",
+    "isActive": true,
+    "discount": 10,
+    "feature": false,
+    "variants": [
+        {
+            "sizes": [
+                {
+                    "size": "681a0a18364056c9ba8a641e",
+                    "quantity": 10
+                },
+                {
+                    "size": "681a0a22364056c9ba8a6422",
+                    "quantity": 20
+                }
+            ],
+            "color": "6800b3de36f5d32aeec1ac6b"
+        },
+        {
+            
+            "sizes": [
+                {
+                    "size": "681a0a18364056c9ba8a641e",
+                    "quantity": 10
+                },
+                {
+                    "size": "681a0a22364056c9ba8a6422",
+                    "quantity": 20
+                }
+            ],
+            "color": "68036a0783f592e2c969c060"
+        }
+    ]
+}
