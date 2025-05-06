@@ -91,11 +91,11 @@ const productSchema = new Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
-productSchema.index({ name: 'text', description: 'text' });
-productSchema.index({ category: 1 });
-productSchema.index({ sportType: 1 });
-productSchema.index({ isActive: 1 });
-productSchema.index({ featured: 1 });
+// Tạo các index để tối ưu hiệu suất truy vấn
+productSchema.index({ name: 'text', description: 'text' }); // Index cho tìm kiếm text
+productSchema.index({ category: 1 }); // Index cho tìm kiếm theo danh mục
+productSchema.index({ sportType: 1 }); // Index cho tìm kiếm theo loại thể thao  
+productSchema.index({ isActive: 1 }); // Index cho lọc sản phẩm đang hoạt động
+productSchema.index({ featured: 1 }); // Index cho lọc sản phẩm nổi bật
 
 module.exports = mongoose.model('Product', productSchema);

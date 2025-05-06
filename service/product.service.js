@@ -2,6 +2,7 @@ const Product = require('../model/Product.model');
 const Category = require('../model/category.model');
 const Color = require('../model/color.model');
 const Size = require('../model/size.model');
+const { cloudinary } = require('../config/cloudinary');
 
 // Create a new product
 const createProduct = async (req, res) => {
@@ -11,7 +12,6 @@ const createProduct = async (req, res) => {
       description,
       price,
       discount,
-      images,
       category,
       sportType,
       variants,
@@ -19,8 +19,11 @@ const createProduct = async (req, res) => {
       featured
     } = req.body;
 
+    // Get image URLs from uploaded files
+    const images = req.files ? req.files.map(file => file.path) : [];
+
     // Validate required fields
-    if (!name || !description || !price || !images || !category || !sportType || !variants) {
+    if (!name || !description || !price || !category || !sportType || !variants) {
       return res.status(400).json({
         msg: "Thiếu thông tin bắt buộc"
       });
@@ -55,7 +58,7 @@ const createProduct = async (req, res) => {
     }
 
     // Validate images
-    if (!Array.isArray(images) || images.length === 0) {
+    if (!images || images.length === 0) {
       return res.status(400).json({
         msg: "Sản phẩm phải có ít nhất một hình ảnh"
       });
@@ -151,6 +154,12 @@ const createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating product:", error);
+    // If there's an error, delete uploaded images
+    if (req.files) {
+      for (const file of req.files) {
+        await cloudinary.uploader.destroy(file.filename);
+      }
+    }
     return res.status(500).json({
       msg: "Lỗi server"
     });

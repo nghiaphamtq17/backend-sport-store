@@ -5,6 +5,7 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 const { roleMiddleware } = require('../middleware/role.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const { createProductValidation, updateProductValidation, productIdValidation } = require('../validators/product.validator');
+const { upload } = require('../config/cloudinary');
 
 // Public routes
 router.get('/', productService.getProducts);
@@ -15,6 +16,7 @@ router.post(
   '/',
   authMiddleware,
   roleMiddleware(['admin', 'manager']),
+  upload.array('images', 5), // Allow up to 5 images
   validate(createProductValidation),
   productService.createProduct
 );
@@ -23,6 +25,7 @@ router.put(
   '/:id',
   authMiddleware,
   roleMiddleware(['admin', 'manager']),
+  upload.array('images', 5), // Allow up to 5 images
   validate(updateProductValidation),
   productService.updateProduct
 );
