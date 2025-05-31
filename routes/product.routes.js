@@ -9,6 +9,8 @@ const { upload } = require('../config/cloudinary');
 
 // Public routes
 router.get('/', productService.getProducts);
+router.get('/sale', productService.getProductsOnSale);
+router.get('/category/:categoryId', productService.getProductsByCategory);
 router.get('/:id', validate(productIdValidation), productService.getProductById);
 
 // Protected routes (require authentication)

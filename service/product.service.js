@@ -163,9 +163,14 @@ const getProducts = async (req, res) => {
       search,
       minPrice,
       maxPrice,
+      color,
+      sizes,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
+    console.log('hehe');
+    console.log('size', sizes);
+    
 
     const query = {};
 
@@ -178,6 +183,17 @@ const getProducts = async (req, res) => {
     }
     if (search) {
       query.$text = { $search: search };
+    }
+
+    if (color) {
+      query['variants.color'] = color;
+    }
+
+    if (sizes) {
+      console.log('size', sizes);
+      
+      const sizeArray = Array.isArray(sizes) ? sizes : [sizes];
+      query['variants.sizes.size'] = { $in: sizeArray };
     }
 
     const sortOptions = {};
@@ -389,6 +405,89 @@ const updateStock = async (req, res) => {
   }
 };
 
+// Get products that are on sale (have discount > 0)
+const getProductsOnSale = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'discount',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const query = {
+      discount: { $gt: 0 },
+      isActive: true
+    };
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const products = await Product.find(query)
+      .sort(sortOptions)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('category')
+      .populate('variants.color')
+      .populate('variants.sizes.size');
+
+    const total = await Product.countDocuments(query);
+
+    return res.status(200).json({
+      products,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Error getting products on sale:", error);
+    return res.status(500).json({
+      msg: "Lỗi server"
+    });
+  }
+};
+
+// Get products by category
+const getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const query = {
+      category: categoryId,
+      isActive: true
+    };
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const products = await Product.find(query)
+      .sort(sortOptions)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('category')
+      .populate('variants.color')
+      .populate('variants.sizes.size');
+
+    const total = await Product.countDocuments(query);
+
+    return res.status(200).json({
+      products,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
+  } catch (error) {
+    console.error("Error getting products by category:", error);
+    return res.status(500).json({
+      msg: "Lỗi server"
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -396,5 +495,7 @@ module.exports = {
   updateProduct,
   deleteProduct,
   addReview,
-  updateStock
+  updateStock,
+  getProductsOnSale,
+  getProductsByCategory
 };
