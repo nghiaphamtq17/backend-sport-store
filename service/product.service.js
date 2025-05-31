@@ -168,9 +168,6 @@ const getProducts = async (req, res) => {
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
-    console.log('hehe');
-    console.log('size', sizes);
-    
 
     const query = {};
 
