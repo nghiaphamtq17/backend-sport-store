@@ -11,8 +11,11 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var colorRouter = require('./routes/color');
 var sizeRoutes = require('./routes/size');
+var paymentRoutes = require('./routes/payment');
+
 var categoryRoutes = require('./routes/category.routes');
 var productRoutes = require('./routes/product.routes');
+
 
 var app = express();
 
@@ -33,6 +36,8 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/color', colorRouter);
 app.use('/sizes', sizeRoutes);
+app.use('/payment', paymentRoutes);
+
 app.use('/categories', categoryRoutes);
 app.use('/products', productRoutes);
 

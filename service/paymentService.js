@@ -1,0 +1,310 @@
+const Order = require('../model/Order');
+const OrderItem = require('../model/OrderItem');
+const Product = require('../model/Product.model');
+
+// Validate cart items before payment
+const validateCartItems = async (cartItems) => {
+  const validationResults = {
+    isValid: true,
+    errors: [],
+    updatedItems: []
+  };
+
+  for (const item of cartItems) {
+    try {
+      const product = await Product.findById(item.product_id);
+      
+      if (!product) {
+        validationResults.isValid = false;
+        validationResults.errors.push(`Sản phẩm "${item.name}" không tồn tại`);
+        continue;
+      }
+
+      // Check if product is active
+      if (!product.isActive) {
+        validationResults.isValid = false;
+        validationResults.errors.push(`Sản phẩm "${item.name}" đã ngừng kinh doanh`);
+        continue;
+      }
+
+      // Check price changes
+      if (product.price !== item.price) {
+        validationResults.isValid = false;
+        validationResults.errors.push(`Giá sản phẩm "${item.name}" đã thay đổi từ ${item.price} thành ${product.price}`);
+      }
+
+      // Check stock
+      const variant = product.variants.find(v => 
+        v.color.toString() === item.color && 
+        v.sizes.some(s => s.size.toString() === item.size)
+      );
+
+      if (!variant) {
+        validationResults.isValid = false;
+        validationResults.errors.push(`Sản phẩm "${item.name}" không còn màu hoặc size này`);
+        continue;
+      }
+
+      const sizeStock = variant.sizes.find(s => s.size.toString() === item.size);
+      if (!sizeStock || sizeStock.quantity < item.quantity) {
+        validationResults.isValid = false;
+        validationResults.errors.push(`Sản phẩm "${item.name}" chỉ còn ${sizeStock?.quantity || 0} sản phẩm`);
+        continue;
+      }
+
+      // Add updated item info
+      validationResults.updatedItems.push({
+        product_id: product._id,
+        name: product.name,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        price: product.price,
+        available_quantity: sizeStock.quantity
+      });
+    } catch (error) {
+      validationResults.isValid = false;
+      validationResults.errors.push(`Lỗi khi kiểm tra sản phẩm "${item.name}": ${error.message}`);
+    }
+  }
+
+  return validationResults;
+};
+
+// Process complete payment flow
+const processPayment = async (paymentData) => {
+  try {
+    // Validate required data
+    if (!paymentData.cartItems || !paymentData.shippingInfo || !paymentData.paymentMethod) {
+      throw new Error('Missing required payment information');
+    }
+
+    const { cartItems, shippingInfo, paymentMethod } = paymentData;
+
+    // Validate payment method
+    if (!['cod', 'bank_transfer'].includes(paymentMethod)) {
+      throw new Error('Invalid payment method. Only COD and bank transfer are supported');
+    }
+
+    // Validate cart items
+    const validationResults = await validateCartItems(cartItems);
+    console.log('validationResults', validationResults);
+    
+    if (!validationResults.isValid) {
+      return {
+        status: 'error',
+        message: 'Có lỗi xảy ra khi kiểm tra giỏ hàng',
+        errors: validationResults.errors,
+        updatedItems: validationResults.updatedItems
+      };
+    }
+
+    // Step 1: Calculate total price with updated prices
+    const totalPrice = validationResults.updatedItems.reduce((sum, item) => {
+      return sum + (item.price * item.quantity);
+    }, 0);
+
+    // Step 2: Create order with initial status
+    const orderData = {
+      user_id: shippingInfo.user_id,
+      full_name: shippingInfo.full_name,
+      phone_number: shippingInfo.phone_number,
+      address: shippingInfo.address,
+      note: shippingInfo.note,
+      total_price: totalPrice,
+      payment_method: paymentMethod,
+      status: paymentMethod === 'cod' ? 'pending' : 'waiting_payment',
+      payment_status: 'pending'
+    };
+
+    // Add bank transfer info if payment method is bank transfer
+    if (paymentMethod === 'bank_transfer') {
+      orderData.bank_transfer_info = {
+        account_number: '1234567890',
+        account_name: 'Your Store Name',
+        bank_name: 'Example Bank',
+        transfer_amount: totalPrice,
+        transfer_content: `Thanh toan don hang ${Date.now()}`
+      };
+    }
+
+    const order = await Order.create(orderData);
+
+    // Create order items with updated prices
+    const orderItems = validationResults.updatedItems.map(item => ({
+      order_id: order._id,
+      product_id: item.product_id,
+      name: item.name,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity,
+      price: item.price
+    }));
+
+    await OrderItem.insertMany(orderItems);
+
+    // Update product stock
+    for (const item of validationResults.updatedItems) {
+      await Product.updateOne(
+        {
+          _id: item.product_id,
+          'variants.color': item.color,
+          'variants.sizes.size': item.size
+        },
+        {
+          $inc: {
+            'variants.$[v].sizes.$[s].quantity': -item.quantity
+          }
+        },
+        {
+          arrayFilters: [
+            { 'v.color': item.color },
+            { 's.size': item.size }
+          ]
+        }
+      );
+    }
+
+    // Step 3: Process payment based on method
+    let paymentResult;
+    if (paymentMethod === 'cod') {
+      paymentResult = {
+        status: 'pending',
+        message: 'Thanh toán khi nhận hàng',
+        orderStatus: 'pending'
+      };
+    } else {
+      paymentResult = {
+        status: 'waiting_payment',
+        message: 'Vui lòng chuyển khoản theo thông tin sau',
+        bankDetails: order.bank_transfer_info,
+        orderStatus: 'waiting_payment'
+      };
+    }
+
+    return {
+      orderId: order._id,
+      status: 'success',
+      message: 'Đơn hàng đã được tạo thành công',
+      totalPrice,
+      payment: paymentResult,
+      orderStatus: paymentResult.orderStatus
+    };
+  } catch (error) {
+    throw new Error('Error processing payment: ' + error.message);
+  }
+};
+
+// Update order status
+const updateOrderStatus = async (orderId, status) => {
+  try {
+    const validStatuses = ['pending', 'waiting_payment', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('Invalid order status');
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { 
+        status,
+        // Update payment status if order is delivered
+        ...(status === 'delivered' && { payment_status: 'completed' })
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    return {
+      orderId: order._id,
+      status: order.status,
+      payment_status: order.payment_status,
+      message: 'Order status updated successfully'
+    };
+  } catch (error) {
+    throw new Error('Error updating order status: ' + error.message);
+  }
+};
+
+// Update payment status
+const updatePaymentStatus = async (orderId, paymentStatus, bankTransferInfo = null) => {
+  try {
+    const validPaymentStatuses = ['pending', 'completed', 'failed'];
+    if (!validPaymentStatuses.includes(paymentStatus)) {
+      throw new Error('Invalid payment status');
+    }
+
+    const updateData = { payment_status: paymentStatus };
+    if (bankTransferInfo) {
+      updateData.bank_transfer_info = {
+        ...bankTransferInfo,
+        transfer_date: new Date()
+      };
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      updateData,
+      { new: true }
+    );
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    return {
+      orderId: order._id,
+      status: order.status,
+      payment_status: order.payment_status,
+      message: 'Payment status updated successfully'
+    };
+  } catch (error) {
+    throw new Error('Error updating payment status: ' + error.message);
+  }
+};
+
+// Get user's previous addresses
+const getUserAddresses = async (userId) => {
+  try {
+    const orders = await Order.find({
+      user_id: userId,
+      address: { $ne: null }
+    })
+    .select('address')
+    .distinct('address')
+    .limit(5);
+
+    return orders;
+  } catch (error) {
+    throw new Error('Error fetching user addresses: ' + error.message);
+  }
+};
+
+// Get order details
+const getOrderDetails = async (orderId) => {
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    const orderItems = await OrderItem.find({ order_id: orderId });
+
+    return {
+      order,
+      items: orderItems
+    };
+  } catch (error) {
+    throw new Error('Error fetching order details: ' + error.message);
+  }
+};
+
+module.exports = {
+  processPayment,
+  updateOrderStatus,
+  updatePaymentStatus,
+  getUserAddresses,
+  getOrderDetails
+}; 
