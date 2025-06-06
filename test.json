@@ -1,0 +1,31 @@
+{
+  "cartItems": [
+    {
+      "product_id": "681a1045886e096916ad1fc3",  // ID sản phẩm
+      "name": "product 1",
+      "size": "681a0a18364056c9ba8a641e",  // ID size
+      "color": "68036a0783f592e2c969c060",  // ID màu
+      "quantity": 2,
+      "price": 200000
+    },
+    {
+      "product_id": "682c87ee7c3dacecbbbc8a44",
+      "name": "product 1",
+      "size": "681a0a18364056c9ba8a641e",
+      "color": "6800b3de36f5d32aeec1ac6b",
+      "quantity": 1,
+      "price": 200000
+    }
+  ],
+  "shippingInfo": {
+    "user_id": "6819a3a61efc41327800cdb1",  // ID người dùng
+    "full_name": "Nguyễn Văn A",
+    "phone_number": "0987654321",
+    "province": "Tuyên Quang",
+    "district": "Quận Nam Từ Liêm",
+    "ward": "Phường Mỹ Đình",
+    "specific_address": "21 Lê Đức Thọ",
+    "note": "Giao hàng giờ hành chính"
+  },
+  "paymentMethod": "bank_transfer"  // hoặc "cod"
+}
