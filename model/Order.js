@@ -17,9 +17,26 @@ const orderSchema = new mongoose.Schema({
     trim: true
   },
   address: {
-    type: String,
-    required: true,
-    trim: true
+    province: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    district: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    ward: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    specific_address: {
+      type: String,
+      required: true,
+      trim: true
+    }
   },
   note: {
     type: String,
@@ -29,6 +46,11 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  shipping_fee: {
+    type: Number,
+    required: true,
+    default: 0
   },
   status: {
     type: String,

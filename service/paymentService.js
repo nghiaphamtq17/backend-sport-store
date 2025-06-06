@@ -86,6 +86,11 @@ const processPayment = async (paymentData) => {
       throw new Error('Invalid payment method. Only COD and bank transfer are supported');
     }
 
+    // Validate shipping info
+    if (!shippingInfo.province || !shippingInfo.district || !shippingInfo.ward || !shippingInfo.specific_address) {
+      throw new Error('Missing required shipping information');
+    }
+
     // Validate cart items
     const validationResults = await validateCartItems(cartItems);
     console.log('validationResults', validationResults);
@@ -104,14 +109,23 @@ const processPayment = async (paymentData) => {
       return sum + (item.price * item.quantity);
     }, 0);
 
+    // Calculate shipping fee (20k for orders outside Hanoi)
+    const shippingFee = shippingInfo.province.toLowerCase() !== 'hà nội' ? 20000 : 0;
+
     // Step 2: Create order with initial status
     const orderData = {
       user_id: shippingInfo.user_id,
       full_name: shippingInfo.full_name,
       phone_number: shippingInfo.phone_number,
-      address: shippingInfo.address,
+      address: {
+        province: shippingInfo.province,
+        district: shippingInfo.district,
+        ward: shippingInfo.ward,
+        specific_address: shippingInfo.specific_address
+      },
       note: shippingInfo.note,
-      total_price: totalPrice,
+      total_price: totalPrice + shippingFee,
+      shipping_fee: shippingFee,
       payment_method: paymentMethod,
       status: paymentMethod === 'cod' ? 'pending' : 'waiting_payment',
       payment_status: 'pending'
@@ -123,7 +137,7 @@ const processPayment = async (paymentData) => {
         account_number: '1234567890',
         account_name: 'Your Store Name',
         bank_name: 'Example Bank',
-        transfer_amount: totalPrice,
+        transfer_amount: totalPrice + shippingFee,
         transfer_content: `Thanh toan don hang ${Date.now()}`
       };
     }
@@ -186,7 +200,8 @@ const processPayment = async (paymentData) => {
       orderId: order._id,
       status: 'success',
       message: 'Đơn hàng đã được tạo thành công',
-      totalPrice,
+      totalPrice: totalPrice + shippingFee,
+      shippingFee,
       payment: paymentResult,
       orderStatus: paymentResult.orderStatus
     };
