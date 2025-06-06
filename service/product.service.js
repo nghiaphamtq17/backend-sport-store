@@ -485,6 +485,51 @@ const getProductsByCategory = async (req, res) => {
   }
 };
 
+// Get top selling products
+const getTopSellingProducts = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5; // Mặc định lấy 5 sản phẩm
+
+    // Tìm sản phẩm bán chạy nhất
+    let products = await Product.find({ isActive: true })
+      .sort({ sold_count: -1 })
+      .limit(limit)
+      .populate('category')
+      .populate('variants.color')
+      .populate('variants.sizes.size');
+
+    // Nếu không có sản phẩm nào được bán (sold_count = 0), lấy 5 sản phẩm mới nhất
+    if (products.length === 0 || products.every(p => p.sold_count === 0)) {
+      products = await Product.find({ isActive: true })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('category')
+        .populate('variants.color')
+        .populate('variants.sizes.size');
+    }
+
+    return res.status(200).json({
+      products: products.map(product => ({
+        _id: product._id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        discount: product.discount,
+        images: product.images,
+        sold_count: product.sold_count,
+        category: product.category,
+        variants: product.variants,
+        rating: product.rating
+      }))
+    });
+  } catch (error) {
+    console.error("Error getting top selling products:", error);
+    return res.status(500).json({
+      msg: "Lỗi server"
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -494,5 +539,6 @@ module.exports = {
   addReview,
   updateStock,
   getProductsOnSale,
-  getProductsByCategory
+  getProductsByCategory,
+  getTopSellingProducts
 };

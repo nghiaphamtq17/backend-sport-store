@@ -1,6 +1,8 @@
 const Order = require('../model/Order');
 const OrderItem = require('../model/OrderItem');
 const Product = require('../model/Product.model');
+const Color = require('../model/color.model');
+const Size = require('../model/size.model');
 
 // Validate cart items before payment
 const validateCartItems = async (cartItems) => {
@@ -157,7 +159,7 @@ const processPayment = async (paymentData) => {
 
     await OrderItem.insertMany(orderItems);
 
-    // Update product stock
+    // Update product stock and sold count
     for (const item of validationResults.updatedItems) {
       await Product.updateOne(
         {
@@ -167,7 +169,8 @@ const processPayment = async (paymentData) => {
         },
         {
           $inc: {
-            'variants.$[v].sizes.$[s].quantity': -item.quantity
+            'variants.$[v].sizes.$[s].quantity': -item.quantity,
+            'sold_count': item.quantity
           }
         },
         {
@@ -307,12 +310,88 @@ const getOrderDetails = async (orderId) => {
 
     const orderItems = await OrderItem.find({ order_id: orderId });
 
+    // Get color, size and image information for each order item
+    const itemsWithDetails = await Promise.all(orderItems.map(async (item) => {
+      const product = await Product.findById(item.product_id);
+      if (!product) {
+        return item;
+      }
+
+      const variant = product.variants.find(v => v.color.toString() === item.color);
+      const colorInfo = variant ? await Color.findById(variant.color) : null;
+      const sizeInfo = variant ? await Size.findById(item.size) : null;
+
+      return {
+        ...item.toObject(),
+        color_name: colorInfo ? colorInfo.name : 'Unknown',
+        color_code: colorInfo ? colorInfo.code : '#000000',
+        size_name: sizeInfo ? sizeInfo.name : 'Unknown',
+        images: product.images || [],
+        product_name: product.name,
+        product_description: product.description,
+        product_price: product.price,
+        product_discount: product.discount
+      };
+    }));
+
     return {
       order,
-      items: orderItems
+      items: itemsWithDetails
     };
   } catch (error) {
     throw new Error('Error fetching order details: ' + error.message);
+  }
+};
+
+// Get user's order history
+const getUserOrders = async (userId) => {
+  try {
+    const orders = await Order.find({ user_id: userId })
+      .sort({ created_at: -1 }) // Sắp xếp theo thời gian tạo mới nhất
+      .populate({
+        path: 'items',
+        populate: {
+          path: 'product_id',
+          select: 'name images price discount'
+        }
+      });
+
+    // Lấy chi tiết sản phẩm cho mỗi đơn hàng
+    const ordersWithDetails = await Promise.all(orders.map(async (order) => {
+      const orderItems = await OrderItem.find({ order_id: order._id });
+      
+      // Lấy thông tin chi tiết sản phẩm cho mỗi item
+      const itemsWithDetails = await Promise.all(orderItems.map(async (item) => {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          return item;
+        }
+
+        const variant = product.variants.find(v => v.color.toString() === item.color);
+        const colorInfo = variant ? await Color.findById(variant.color) : null;
+        const sizeInfo = variant ? await Size.findById(item.size) : null;
+
+        return {
+          ...item.toObject(),
+          color_name: colorInfo ? colorInfo.name : 'Unknown',
+          color_code: colorInfo ? colorInfo.code : '#000000',
+          size_name: sizeInfo ? sizeInfo.name : 'Unknown',
+          product_name: product.name,
+          product_images: product.images,
+          product_price: product.price,
+          product_discount: product.discount
+        };
+      }));
+
+      return {
+        ...order.toObject(),
+        items: itemsWithDetails
+      };
+    }));
+
+    return ordersWithDetails;
+  } catch (error) {
+    throw new Error('Error fetching user orders: ' + error.message);
   }
 };
 
@@ -321,5 +400,6 @@ module.exports = {
   updateOrderStatus,
   updatePaymentStatus,
   getUserAddresses,
-  getOrderDetails
+  getOrderDetails,
+  getUserOrders
 }; 

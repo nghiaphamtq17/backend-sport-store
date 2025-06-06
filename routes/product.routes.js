@@ -10,6 +10,10 @@ const { upload } = require('../config/cloudinary');
 // Public routes
 router.get('/', productService.getProducts);
 router.get('/sale', productService.getProductsOnSale);
+
+
+// danh sách sản phẩm bán chạy nhâts
+router.get('/top-selling', productService.getTopSellingProducts);
 router.get('/category/:categoryId', productService.getProductsByCategory);
 router.get('/:id', validate(productIdValidation), productService.getProductById);
 

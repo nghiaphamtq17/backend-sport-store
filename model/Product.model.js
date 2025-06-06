@@ -58,6 +58,10 @@ const productSchema = new Schema({
     type: Boolean,
     default: false
   },
+  sold_count: {
+    type: Number,
+    default: 0
+  },
   rating: {
     type: Number,
     default: 0,
@@ -91,5 +95,6 @@ productSchema.index({ name: 'text', description: 'text' }); // Index cho tìm ki
 productSchema.index({ category: 1 }); // Index cho tìm kiếm theo danh mục
 productSchema.index({ isActive: 1 }); // Index cho lọc sản phẩm đang hoạt động
 productSchema.index({ featured: 1 }); // Index cho lọc sản phẩm nổi bật
+productSchema.index({ sold_count: -1 }); // Index cho việc sắp xếp theo số lượng bán
 
 module.exports = mongoose.model('Product', productSchema);

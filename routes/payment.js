@@ -5,7 +5,8 @@ const {
   updateOrderStatus, 
   updatePaymentStatus,
   getUserAddresses, 
-  getOrderDetails 
+  getOrderDetails,
+  getUserOrders
 } = require('../service/paymentService');
 const { authMiddleware } = require('../middleware/auth.middleware');
 
@@ -14,6 +15,16 @@ router.post('/process', async (req, res) => {
   try {
     const result = await processPayment(req.body);
     res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get user's order history -> khi đăng nhập mà đặt hàng sẽ lưu lại danh sách đã đặjt hàng
+router.get('/user-orders', authMiddleware, async (req, res) => {
+  try {
+    const orders = await getUserOrders(req.user.id);
+    res.json(orders);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -63,5 +74,7 @@ router.get('/user-addresses', authMiddleware, async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+
 
 module.exports = router; 
