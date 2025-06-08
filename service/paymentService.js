@@ -395,11 +395,126 @@ const getUserOrders = async (userId) => {
   }
 };
 
+// Get user's order history with pagination and filters
+const getUserOrdersWithFilters = async (userId, filters = {}, page = 1, limit = 10) => {
+  try {
+    const query = { user_id: userId };
+
+    // Add status filter if provided
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
+    // Add date range filter if provided
+    if (filters.startDate && filters.endDate) {
+      query.created_at = {
+        $gte: new Date(filters.startDate),
+        $lte: new Date(filters.endDate)
+      };
+    }
+
+    // Add payment method filter if provided
+    if (filters.paymentMethod) {
+      query.payment_method = filters.paymentMethod;
+    }
+
+    const totalOrders = await Order.countDocuments(query);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    const orders = await Order.find(query)
+      .sort({ created_at: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Get order items and details
+    const ordersWithDetails = await Promise.all(orders.map(async (order) => {
+      const orderItems = await OrderItem.find({ order_id: order._id });
+      
+      const itemsWithDetails = await Promise.all(orderItems.map(async (item) => {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          return item;
+        }
+
+        const variant = product.variants.find(v => v.color.toString() === item.color);
+        const colorInfo = variant ? await Color.findById(variant.color) : null;
+        const sizeInfo = variant ? await Size.findById(item.size) : null;
+
+        return {
+          ...item.toObject(),
+          color_name: colorInfo ? colorInfo.name : 'Unknown',
+          color_code: colorInfo ? colorInfo.code : '#000000',
+          size_name: sizeInfo ? sizeInfo.name : 'Unknown',
+          product_name: product.name,
+          product_images: product.images,
+          product_price: product.price,
+          product_discount: product.discount
+        };
+      }));
+
+      return {
+        ...order.toObject(),
+        items: itemsWithDetails
+      };
+    }));
+
+    return {
+      orders: ordersWithDetails,
+      pagination: {
+        total: totalOrders,
+        totalPages,
+        currentPage: page,
+        limit
+      }
+    };
+  } catch (error) {
+    throw new Error('Error fetching user orders with filters: ' + error.message);
+  }
+};
+
+// Get order statistics for user
+const getUserOrderStatistics = async (userId) => {
+  try {
+    const totalOrders = await Order.countDocuments({ user_id: userId });
+    const totalSpent = await Order.aggregate([
+      { $match: { user_id: userId } },
+      { $group: { _id: null, total: { $sum: '$total_price' } } }
+    ]);
+
+    const ordersByStatus = await Order.aggregate([
+      { $match: { user_id: userId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const ordersByPaymentMethod = await Order.aggregate([
+      { $match: { user_id: userId } },
+      { $group: { _id: '$payment_method', count: { $sum: 1 } } }
+    ]);
+
+    return {
+      totalOrders,
+      totalSpent: totalSpent[0]?.total || 0,
+      ordersByStatus: ordersByStatus.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {}),
+      ordersByPaymentMethod: ordersByPaymentMethod.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {})
+    };
+  } catch (error) {
+    throw new Error('Error fetching user order statistics: ' + error.message);
+  }
+};
+
 module.exports = {
   processPayment,
   updateOrderStatus,
   updatePaymentStatus,
   getUserAddresses,
   getOrderDetails,
-  getUserOrders
+  getUserOrders,
+  getUserOrdersWithFilters,
+  getUserOrderStatistics
 }; 

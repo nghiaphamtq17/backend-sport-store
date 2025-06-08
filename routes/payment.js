@@ -6,7 +6,9 @@ const {
   updatePaymentStatus,
   getUserAddresses, 
   getOrderDetails,
-  getUserOrders
+  getUserOrders,
+  getUserOrdersWithFilters,
+  getUserOrderStatistics
 } = require('../service/paymentService');
 const { authMiddleware } = require('../middleware/auth.middleware');
 
@@ -15,6 +17,47 @@ router.post('/process', async (req, res) => {
   try {
     const result = await processPayment(req.body);
     res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get user's order history with filters and pagination
+router.get('/user-orders/filtered', authMiddleware, async (req, res) => {
+  try {
+    const { 
+      status, 
+      startDate, 
+      endDate, 
+      paymentMethod,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const filters = {
+      status,
+      startDate,
+      endDate,
+      paymentMethod
+    };
+
+    const result = await getUserOrdersWithFilters(
+      req.user.id,
+      filters,
+      parseInt(page),
+      parseInt(limit)
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get user's order statistics
+router.get('/user-orders/statistics', authMiddleware, async (req, res) => {
+  try {
+    const statistics = await getUserOrderStatistics(req.user.id);
+    res.json(statistics);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -74,7 +117,5 @@ router.get('/user-addresses', authMiddleware, async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-
-
 
 module.exports = router; 
