@@ -16,6 +16,7 @@ router.get('/sale', productService.getProductsOnSale);
 router.get('/top-selling', productService.getTopSellingProducts);
 router.get('/category/:categoryId', productService.getProductsByCategory);
 router.get('/:id', validate(productIdValidation), productService.getProductById);
+router.get('/:id/reviews', validate(productIdValidation), productService.getProductReviews);
 
 // Protected routes (require authentication)
 router.post(

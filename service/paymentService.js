@@ -348,13 +348,15 @@ const getUserOrders = async (userId) => {
   try {
     const orders = await Order.find({ user_id: userId })
       .sort({ created_at: -1 }) // Sắp xếp theo thời gian tạo mới nhất
-      .populate({
-        path: 'items',
-        populate: {
-          path: 'product_id',
-          select: 'name images price discount'
-        }
-      });
+      // .populate({
+      //   // path: 'items',
+      //   populate: {
+      //     path: 'product_id',
+      //     select: 'name images price discount'
+      //   }
+      // });
+      console.log('order', orders);
+      
 
     // Lấy chi tiết sản phẩm cho mỗi đơn hàng
     const ordersWithDetails = await Promise.all(orders.map(async (order) => {

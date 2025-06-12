@@ -12,6 +12,8 @@ var usersRouter = require('./routes/users');
 var colorRouter = require('./routes/color');
 var sizeRoutes = require('./routes/size');
 var paymentRoutes = require('./routes/payment');
+var statisticsRoutes = require('./routes/statistics.routes');
+var expenseRoutes = require('./routes/expense.routes');
 
 var categoryRoutes = require('./routes/category.routes');
 var productRoutes = require('./routes/product.routes');
@@ -37,6 +39,8 @@ app.use('/users', usersRouter);
 app.use('/color', colorRouter);
 app.use('/sizes', sizeRoutes);
 app.use('/payment', paymentRoutes);
+app.use('/statistics', statisticsRoutes);
+app.use('/expenses', expenseRoutes);
 
 app.use('/categories', categoryRoutes);
 app.use('/products', productRoutes);

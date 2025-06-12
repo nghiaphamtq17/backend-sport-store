@@ -3,6 +3,9 @@ const Category = require('../model/category.model');
 const Color = require('../model/color.model');
 const Size = require('../model/size.model');
 const { cloudinary } = require('../config/cloudinary');
+const OrderItem = require('../model/OrderItem');
+const Order = require('../model/Order');
+const User = require('../model/User.model');
 
 // Create a new product
 const createProduct = async (req, res) => {
@@ -223,6 +226,7 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?._id; // Get user ID if authenticated
 
     const product = await Product.findById(id)
       .populate('category')
@@ -236,7 +240,33 @@ const getProductById = async (req, res) => {
       });
     }
 
-    return res.status(200).json(product);
+    // Check if user can review the product
+    let canReview = false;
+    if (userId) {
+      // Check if user has already reviewed
+      const hasReviewed = product.reviews.some(review => review.user._id.toString() === userId.toString());
+      
+      if (!hasReviewed) {
+        // Check if user has purchased and received the product
+        const orderItem = await OrderItem.findOne({
+          product_id: id,
+          order_id: {
+            $in: await Order.find({
+              user_id: userId,
+              status: 'delivered',
+              payment_status: 'completed'
+            }).distinct('_id')
+          }
+        });
+        canReview = !!orderItem;
+      }
+    }
+
+    // Add canReview field to the response
+    const productResponse = product.toObject();
+    productResponse.canReview = canReview;
+
+    return res.status(200).json(productResponse);
   } catch (error) {
     console.error("Error getting product:", error);
     return res.status(500).json({
@@ -332,6 +362,24 @@ const addReview = async (req, res) => {
     if (existingReview) {
       return res.status(400).json({
         msg: "Bạn đã đánh giá sản phẩm này"
+      });
+    }
+
+    // Check if user has purchased the product
+    const orderItem = await OrderItem.findOne({
+      product_id: id,
+      order_id: {
+        $in: await Order.find({
+          user_id: userId,
+          status: 'delivered',
+          payment_status: 'completed'
+        }).distinct('_id')
+      }
+    });
+
+    if (!orderItem) {
+      return res.status(403).json({
+        msg: "Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận được hàng"
       });
     }
 
@@ -530,6 +578,84 @@ const getTopSellingProducts = async (req, res) => {
   }
 };
 
+// Get product reviews with pagination and filtering
+const getProductReviews = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      page = 1,
+      limit = 10,
+      rating,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({
+        msg: "Không tìm thấy sản phẩm"
+      });
+    }
+
+    // Build query for reviews
+    let reviews = [...product.reviews];
+
+    // Filter by rating if provided
+    if (rating) {
+      reviews = reviews.filter(review => review.rating === parseInt(rating));
+    }
+
+    // Sort reviews
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    reviews.sort((a, b) => {
+      if (sortBy === 'rating') {
+        return sortOrder === 'desc' ? b.rating - a.rating : a.rating - b.rating;
+      }
+      return sortOrder === 'desc' 
+        ? new Date(b[sortBy]) - new Date(a[sortBy])
+        : new Date(a[sortBy]) - new Date(b[sortBy]);
+    });
+
+    // Calculate pagination
+    const total = reviews.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedReviews = reviews.slice(startIndex, endIndex);
+
+    // Populate user information for reviews
+    const populatedReviews = await Promise.all(
+      paginatedReviews.map(async (review) => {
+        const user = await User.findById(review.user).select('firstName lastName');
+        return {
+          ...review.toObject(),
+          user: user || { firstName: 'Unknown', lastName: 'User' }
+        };
+      })
+    );
+
+    // Calculate rating statistics
+    const ratingStats = reviews.reduce((stats, review) => {
+      stats[review.rating] = (stats[review.rating] || 0) + 1;
+      return stats;
+    }, {});
+
+    return res.status(200).json({
+      reviews: populatedReviews,
+      totalReviews: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      ratingStats,
+      averageRating: product.rating
+    });
+  } catch (error) {
+    console.error("Error getting product reviews:", error);
+    return res.status(500).json({
+      msg: "Lỗi server"
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -540,5 +666,6 @@ module.exports = {
   updateStock,
   getProductsOnSale,
   getProductsByCategory,
-  getTopSellingProducts
+  getTopSellingProducts,
+  getProductReviews
 };
